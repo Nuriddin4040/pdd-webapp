@@ -1,0 +1,40 @@
+[
+  {
+    "id": 1,
+    "text_ru": "Разрешается ли вам выполнить обгон по трамвайным путям попутного направления?",
+    "text_uz": "Sizga bir yo'nalishdagi tramvay yo'llari orqali quvib o'tishga ruxsat etiladimi?",
+    "options_ru": [
+      "Разрешается всегда",
+      "Разрешается, если не создаем помех трамваю",
+      "Запрещается"
+    ],
+    "options_uz": [
+      "Har doim ruxsat etiladi",
+      "Tramvayga xalaqit bermasa ruxsat etiladi",
+      "Taqiqlanadi"
+    ],
+    "correct": 2,
+    "expl_ru": "Обгон — это выезд на ВСТРЕЧНУЮ полосу. Выезд на встречные трамвайные пути строго запрещен.",
+    "expl_uz": "Quvib o'tish - bu QARAMA-QARSHI yo'lakka chiqish. Qarama-qarshi tramvay yo'llariga chiqish qat'iyan man etiladi.",
+    "image": null
+  },
+  {
+    "id": 2,
+    "text_ru": "Вы обязаны уступить дорогу пешеходам:",
+    "text_uz": "Siz piyodalarga yo'l berishingiz shart:",
+    "options_ru": [
+      "Только переходящим проезжую часть по нерегулируемому переходу",
+      "Только при повороте направо или налево",
+      "В обоих перечисленных случаях"
+    ],
+    "options_uz": [
+      "Faqat tartibga solinmagan o'tish joyidan o'tayotganlarga",
+      "Faqat o'ngga yoki chapga burilayotganda",
+      "Yuqoridagi ikkala holatda ham"
+    ],
+    "correct": 2,
+    "expl_ru": "Правильный вариант объединяет обе ситуации, согласно ПДД.",
+    "expl_uz": "To'g'ri variant Yo'l harakati qoidalariga muvofiq ikkala holatni ham birlashtiradi.",
+    "image": null
+  }
+]
