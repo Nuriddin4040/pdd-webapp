@@ -14,6 +14,7 @@
         }
         .header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 15px; color: var(--tg-theme-hint-color, #98989d); }
         .question-card { background: var(--tg-theme-secondary-bg-color, #2c2c2e); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .q-img { width: 100%; border-radius: 12px; margin-bottom: 15px; display: none; object-fit: cover; }
         .question-text { font-size: 18px; font-weight: 600; margin-bottom: 20px; line-height: 1.4; }
         .option-btn {
             display: block; width: 100%; padding: 16px; margin-bottom: 12px;
@@ -30,12 +31,13 @@
 <body>
 
     <div class="header">
-        <span id="q-counter">Вопрос 1 из 3</span>
+        <span id="q-counter">Загрузка...</span>
         <span id="score-counter">Баллы: 0</span>
     </div>
 
     <div class="question-card">
-        <div class="question-text" id="q-text">Загрузка...</div>
+        <img id="q-image" class="q-img" src="" alt="Иллюстрация">
+        <div class="question-text" id="q-text">Соединение с базой данных...</div>
         <div id="options-container"></div>
         <div id="feedback-box" class="feedback"></div>
     </div>
@@ -53,94 +55,94 @@
             uz: { correct: "✅ To'g'ri!", error: "❌ Xato!", expl: "Tahlil", nextBtn: "KEYINGI SAVOL", finishBtn: "IMTIHONNI YAKUNLASH", qWord: "Savol", sWord: "Ball", ofWord: "dan" }
         };
 
-        // Наша тестовая база (потом бот будет передавать их через API, но пока зашьем сюда 3 вопроса для теста логики)
-        const db = {
-            ru: [
-                { text: "Разрешается ли обгон по трамвайным путям встречного направления?", options: ["Да", "Нет", "Если нет трамвая"], correct: 1, expl: "Выезд на встречные пути запрещен." },
-                { text: "С какой максимальной скоростью можно ехать в жилой зоне?", options: ["20 км/ч", "40 км/ч", "50 км/ч"], correct: 0, expl: "В жилых зонах скорость не более 20 км/ч." },
-                { text: "Кто уступает дорогу при одновременном перестроении?", options: ["Водитель справа", "Водитель слева", "Никто"], correct: 1, expl: "При одновременном перестроении уступает тот, кто слева (помеха справа)." }
-            ],
-            uz: [
-                { text: "Qarama-qarshi yo'nalishdagi tramvay yo'llarida quvib o'tishga ruxsat etiladimi?", options: ["Ha", "Yo'q", "Tramvay bo'lmasa"], correct: 1, expl: "Qarama-qarshi yo'llarga chiqish taqiqlanadi." },
-                { text: "Turar joy dahalarida maksimal ruxsat etilgan tezlik qancha?", options: ["20 km/soat", "40 km/soat", "50 km/soat"], correct: 0, expl: "Turar joylarda tezlik 20 km/soat dan oshmasligi kerak." },
-                { text: "Bir vaqtda qayta qurishda (perestroyeniye) kim yo'l beradi?", options: ["O'ngdagi haydovchi", "Chapdagi haydovchi", "Hech kim"], correct: 1, expl: "Bir vaqtda qayta qurishda chapdagi haydovchi yo'l beradi (o'ngdan to'siq)." }
-            ]
-        };
+        const defaultImage = "https://img.freepik.com/premium-vector/car-icon-car-icon-vector-in-trendy-flat-style-isolated-on-white-background_120816-1059.jpg";
 
-        const questions = db[lang];
+        let ticketQuestions = [];
         let currentIdx = 0;
         let score = 0;
 
+        // 1. Загружаем нашу базу из файла
+        async function loadDatabase() {
+            try {
+                const response = await fetch('questions.json');
+                const allQuestions = await response.json();
+                
+                // Перемешиваем и берем 20 (или сколько есть, если меньше)
+                const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+                ticketQuestions = shuffled.slice(0, 20); 
+                
+                renderQuestion();
+            } catch (error) {
+                document.getElementById('q-text').innerText = "Ошибка загрузки вопросов. Проверьте интернет.";
+            }
+        }
+
+        // 2. Рендерим вопрос
         function renderQuestion() {
-            document.getElementById('q-counter').innerText = `${ui[lang].qWord} ${currentIdx + 1} ${ui[lang].ofWord} ${questions.length}`;
+            const q = ticketQuestions[currentIdx];
+            const text = lang === 'uz' ? q.text_uz : q.text_ru;
+            const options = lang === 'uz' ? q.options_uz : q.options_ru;
+            const imgUrl = q.image ? q.image : defaultImage;
+
+            document.getElementById('q-counter').innerText = `${ui[lang].qWord} ${currentIdx + 1} ${ui[lang].ofWord} ${ticketQuestions.length}`;
             document.getElementById('score-counter').innerText = `${ui[lang].sWord}: ${score}`;
-            document.getElementById('q-text').innerText = questions[currentIdx].text;
+            document.getElementById('q-text').innerText = text;
             
+            const imgEl = document.getElementById('q-image');
+            imgEl.src = imgUrl;
+            imgEl.style.display = 'block'; // Показываем картинку
+
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             document.getElementById('feedback-box').style.display = 'none';
             
-            questions[currentIdx].options.forEach((opt, index) => {
+            options.forEach((opt, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.innerText = `${index + 1}. ${opt}`;
-                btn.onclick = () => checkAnswer(index, btn);
+                btn.onclick = () => checkAnswer(index, btn, q);
                 container.appendChild(btn);
             });
         }
 
-        function checkAnswer(selectedIndex, clickedBtn) {
+        // 3. Проверка ответа
+        function checkAnswer(selectedIndex, clickedBtn, q) {
             const feedback = document.getElementById('feedback-box');
             feedback.style.display = 'block';
             
-            document.querySelectorAll('.option-btn').forEach(b => {
-                b.disabled = true; b.style.borderColor = 'transparent';
-            });
+            document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.style.borderColor = 'transparent'; });
 
-            if (selectedIndex === questions[currentIdx].correct) {
-                clickedBtn.style.backgroundColor = 'rgba(52, 199, 89, 0.2)';
-                clickedBtn.style.borderColor = '#34c759';
-                feedback.className = 'feedback success';
-                feedback.innerHTML = `<b>${ui[lang].correct}</b>`;
-                score++;
-                document.getElementById('score-counter').innerText = `${ui[lang].sWord}: ${score}`;
+            if (selectedIndex === q.correct) {
+                clickedBtn.style.backgroundColor = 'rgba(52, 199, 89, 0.2)'; clickedBtn.style.borderColor = '#34c759';
+                feedback.className = 'feedback success'; feedback.innerHTML = `<b>${ui[lang].correct}</b>`;
+                score++; document.getElementById('score-counter').innerText = `${ui[lang].sWord}: ${score}`;
                 tg.HapticFeedback.notificationOccurred('success');
             } else {
-                clickedBtn.style.backgroundColor = 'rgba(255, 59, 48, 0.2)';
-                clickedBtn.style.borderColor = '#ff3b30';
+                const expl = lang === 'uz' ? q.expl_uz : q.expl_ru;
+                clickedBtn.style.backgroundColor = 'rgba(255, 59, 48, 0.2)'; clickedBtn.style.borderColor = '#ff3b30';
                 feedback.className = 'feedback error';
-                feedback.innerHTML = `<b>${ui[lang].error}</b><br><br>💡 <b>${ui[lang].expl}:</b><br>${questions[currentIdx].expl}`;
+                feedback.innerHTML = `<b>${ui[lang].error}</b><br><br>💡 <b>${ui[lang].expl}:</b><br>${expl}`;
                 tg.HapticFeedback.notificationOccurred('error');
             }
             
-            // Настраиваем главную кнопку Telegram
-            if (currentIdx < questions.length - 1) {
+            if (currentIdx < ticketQuestions.length - 1) {
                 tg.MainButton.text = ui[lang].nextBtn;
             } else {
-                tg.MainButton.text = ui[lang].finishBtn;
-                tg.MainButton.color = "#34c759"; // Зеленая кнопка в конце
+                tg.MainButton.text = ui[lang].finishBtn; tg.MainButton.color = "#34c759";
             }
             tg.MainButton.show();
         }
 
-        // Обработка нажатия на главную нижнюю кнопку Telegram
         tg.MainButton.onClick(() => {
-            if (currentIdx < questions.length - 1) {
-                currentIdx++;
-                renderQuestion();
-                tg.MainButton.hide();
+            if (currentIdx < ticketQuestions.length - 1) {
+                currentIdx++; renderQuestion(); tg.MainButton.hide();
             } else {
-                // ЭКЗАМЕН ОКОНЧЕН! Отправляем данные в бота
-                const resultData = {
-                    action: "exam_result",
-                    score: score,
-                    total: questions.length
-                };
-                tg.sendData(JSON.stringify(resultData));
+                tg.sendData(JSON.stringify({ action: "exam_result", score: score, total: ticketQuestions.length }));
             }
         });
 
-        renderQuestion();
+        // Запуск!
+        loadDatabase();
     </script>
 </body>
 </html>
